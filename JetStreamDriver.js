@@ -1812,6 +1812,7 @@ let BENCHMARKS = [
         files: [
             "./simple/doxbee-promise.js",
         ],
+        iterations: 10,
         tags: ["Simple"],
     }),
     new AsyncBenchmark({
@@ -1819,6 +1820,7 @@ let BENCHMARKS = [
         files: [
             "./simple/doxbee-async.js",
         ],
+        iterations: 10,
         tags: ["Simple"],
     }),
     // SeaMonster
