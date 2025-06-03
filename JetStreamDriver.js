@@ -39,6 +39,7 @@ globalThis.testWorstCaseCountMap ??= new Map();
 globalThis.dumpJSONResults ??= false;
 globalThis.customTestList ??= [];
 globalThis.startDelay ??= undefined;
+globalThis.runBenchmarks = [];
 
 let shouldReport = false;
 
@@ -282,6 +283,7 @@ class Driver {
 
             benchmark.updateUIAfterRun();
             console.log(benchmark.name)
+            globalThis.runBenchmarks.push(benchmark.name);
 
             if (isInBrowser) {
                 const cache = JetStream.blobDataCache;
