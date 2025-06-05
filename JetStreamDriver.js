@@ -40,6 +40,7 @@ globalThis.dumpJSONResults ??= false;
 globalThis.customTestList ??= [];
 globalThis.startDelay ??= undefined;
 globalThis.runBenchmarks = [];
+globalThis.startedBenchmarks = [];
 
 let shouldReport = false;
 
@@ -273,10 +274,12 @@ class Driver {
             benchmark.updateUIBeforeRun();
 
             await updateUI();
+            globalThis.startedBenchmarks.push(benchmark.name);
 
             try {
                 await benchmark.run();
             } catch(e) {
+                globalThis.startedBenchmarks.push(benchmark.name + " (error)");
                 this.reportError(benchmark, e);
                 throw e;
             }
