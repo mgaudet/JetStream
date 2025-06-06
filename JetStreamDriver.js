@@ -1032,19 +1032,30 @@ class Benchmark {
     scoreIdentifiers() { throw new Error("Must be implemented by subclasses"); }
 
     updateUIBeforeRun() {
+         log("Inside updateUIBeforeRun");
         if (!isInBrowser) {
             if (!dumpJSONResults)
                 console.log(`Running ${this.name}:`);
             return;
         }
 
+        log("Doing GEBI")
         const containerUI = document.getElementById("results");
+        log("Got containerUI");
         const resultsBenchmarkUI = document.getElementById(`benchmark-${this.name}`);
+        log("Got resultsBenchmarkUI")
         containerUI.insertBefore(resultsBenchmarkUI, containerUI.firstChild);
+        log("Inserted resultsBenchmarkUI into containerUI");
         resultsBenchmarkUI.classList.add("benchmark-running");
+        log("Added benchmark-running class to resultsBenchmarkUI");
 
-        for (const id of this.scoreIdentifiers())
+        log("Iterating scores")
+        log("scoreIdentifiers", this.scoreIdentifiers());
+        for (const id of this.scoreIdentifiers()) {
+            log("GEBI", id);
             document.getElementById(id).innerHTML = "...";
+            log("set InnerHTML to ...");
+        }
     }
 
     updateUIAfterRun() {
