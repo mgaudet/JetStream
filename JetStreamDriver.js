@@ -41,6 +41,10 @@ globalThis.customTestList ??= [];
 globalThis.startDelay ??= undefined;
 globalThis.runBenchmarks = [];
 globalThis.startedBenchmarks = [];
+globalThis.execLog = [];
+function log(message) {
+    globalThis.execLog.push(message);
+}
 
 let shouldReport = false;
 
@@ -258,6 +262,7 @@ class Driver {
     }
 
     async start() {
+        log("Called Start on Driver");
         let statusElement = false;
         let summaryElement = false;
         if (isInBrowser) {
@@ -267,13 +272,19 @@ class Driver {
         } else if (!dumpJSONResults)
             console.log("Starting JetStream3");
 
+        log("Calling updateUI")
         await updateUI();
 
+        log("Starting benchmark loop");
         const start = performance.now();
         for (const benchmark of this.benchmarks) {
+            log("Calling updateUIBeforeRun on benchmark: " + benchmark.name);
             benchmark.updateUIBeforeRun();
 
+            log("Calling updateUI in loop");
             await updateUI();
+
+            log("Called benchmark")
             globalThis.startedBenchmarks.push(benchmark.name);
 
             try {
