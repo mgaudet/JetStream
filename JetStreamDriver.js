@@ -262,103 +262,108 @@ class Driver {
     }
 
     async start() {
-        log("Called Start on Driver");
-        let statusElement = false;
-        let summaryElement = false;
-        if (isInBrowser) {
-            statusElement = document.getElementById("status");
-            summaryElement = document.getElementById("result-summary");
-            statusElement.innerHTML = `<label>Running...</label>`;
-        } else if (!dumpJSONResults)
-            console.log("Starting JetStream3");
+        try {
+            log("Called Start on Driver");
+            let statusElement = false;
+            let summaryElement = false;
+            if (isInBrowser) {
+                statusElement = document.getElementById("status");
+                summaryElement = document.getElementById("result-summary");
+                statusElement.innerHTML = `<label>Running...</label>`;
+            } else if (!dumpJSONResults)
+                console.log("Starting JetStream3");
 
-        log("Calling updateUI")
-        await updateUI();
-
-        log("Starting benchmark loop");
-        const start = performance.now();
-        for (const benchmark of this.benchmarks) {
-            log("Calling updateUIBeforeRun on benchmark: " + benchmark.name);
-            benchmark.updateUIBeforeRun();
-
-            log("Calling updateUI in loop");
+            log("Calling updateUI")
             await updateUI();
 
-            log("Called benchmark")
-            globalThis.startedBenchmarks.push(benchmark.name);
+            log("Starting benchmark loop");
+            const start = performance.now();
+            for (const benchmark of this.benchmarks) {
+                log("Calling updateUIBeforeRun on benchmark: " + benchmark.name);
+                benchmark.updateUIBeforeRun();
 
-            try {
-                await benchmark.run();
-            } catch(e) {
-                globalThis.startedBenchmarks.push(benchmark.name + " (error)");
-                this.reportError(benchmark, e);
-                throw e;
-            }
+                log("Calling updateUI in loop");
+                await updateUI();
 
-            benchmark.updateUIAfterRun();
-            console.log(benchmark.name)
-            globalThis.runBenchmarks.push(benchmark.name);
+                log("Called benchmark")
+                globalThis.startedBenchmarks.push(benchmark.name);
 
-            if (isInBrowser) {
-                const cache = JetStream.blobDataCache;
-                for (const file of benchmark.plan.files) {
-                    const blobData = cache[file];
-                    blobData.refCount--;
-                    if (!blobData.refCount)
-                        cache[file] = undefined;
+                try {
+                    await benchmark.run();
+                } catch (e) {
+                    globalThis.startedBenchmarks.push(benchmark.name + " (error)");
+                    this.reportError(benchmark, e);
+                    throw e;
+                }
+
+                benchmark.updateUIAfterRun();
+                console.log(benchmark.name)
+                globalThis.runBenchmarks.push(benchmark.name);
+
+                if (isInBrowser) {
+                    const cache = JetStream.blobDataCache;
+                    for (const file of benchmark.plan.files) {
+                        const blobData = cache[file];
+                        blobData.refCount--;
+                        if (!blobData.refCount)
+                            cache[file] = undefined;
+                    }
                 }
             }
-        }
 
-        const totalTime = performance.now() - start;
-        if (measureTotalTimeAsSubtest) {
-            if (isInBrowser)
-                document.getElementById("benchmark-total-time-score").innerHTML = uiFriendlyNumber(totalTime);
-            else if (!dumpJSONResults)
-                console.log("Total time:", uiFriendlyNumber(totalTime));
-            allScores.push(totalTime);
-        }
-
-        const allScores = [];
-        for (const benchmark of this.benchmarks)
-            allScores.push(benchmark.score);
-
-        categoryScores = new Map;
-        for (const benchmark of this.benchmarks) {
-            for (let category of Object.keys(benchmark.subScores()))
-                categoryScores.set(category, []);
-        }
-
-        for (const benchmark of this.benchmarks) {
-            for (let [category, value] of Object.entries(benchmark.subScores())) {
-                const arr = categoryScores.get(category);
-                arr.push(value);
+            const totalTime = performance.now() - start;
+            if (measureTotalTimeAsSubtest) {
+                if (isInBrowser)
+                    document.getElementById("benchmark-total-time-score").innerHTML = uiFriendlyNumber(totalTime);
+                else if (!dumpJSONResults)
+                    console.log("Total time:", uiFriendlyNumber(totalTime));
+                allScores.push(totalTime);
             }
-        }
 
-        if (isInBrowser) {
-            summaryElement.classList.add('done');
-            summaryElement.innerHTML = "<div class=\"score\">" + uiFriendlyScore(geomean(allScores)) + "</div><label>Score</label>";
-            summaryElement.onclick = displayCategoryScores;
-            if (showScoreDetails)
-                displayCategoryScores();
-            statusElement.innerHTML = '';
-        } else if (!dumpJSONResults) {
-            console.log("\n");
-            for (let [category, scores] of categoryScores)
-                console.log(`${category}: ${uiFriendlyScore(geomean(scores))}`);
+            const allScores = [];
+            for (const benchmark of this.benchmarks)
+                allScores.push(benchmark.score);
 
-            console.log("\nTotal Score: ", uiFriendlyScore(geomean(allScores)), "\n");
-        }
+            categoryScores = new Map;
+            for (const benchmark of this.benchmarks) {
+                for (let category of Object.keys(benchmark.subScores()))
+                    categoryScores.set(category, []);
+            }
 
-        this.reportScoreToRunBenchmarkRunner();
-        this.dumpJSONResultsIfNeeded();
-        this.isDone = true;
+            for (const benchmark of this.benchmarks) {
+                for (let [category, value] of Object.entries(benchmark.subScores())) {
+                    const arr = categoryScores.get(category);
+                    arr.push(value);
+                }
+            }
 
-        if (isInBrowser) {
-            globalThis.dispatchEvent(new CustomEvent("JetStreamDone", {
-                detail: this.resultsObject()
-            }));
+            if (isInBrowser) {
+                summaryElement.classList.add('done');
+                summaryElement.innerHTML = "<div class=\"score\">" + uiFriendlyScore(geomean(allScores)) + "</div><label>Score</label>";
+                summaryElement.onclick = displayCategoryScores;
+                if (showScoreDetails)
+                    displayCategoryScores();
+                statusElement.innerHTML = '';
+            } else if (!dumpJSONResults) {
+                console.log("\n");
+                for (let [category, scores] of categoryScores)
+                    console.log(`${category}: ${uiFriendlyScore(geomean(scores))}`);
+
+                console.log("\nTotal Score: ", uiFriendlyScore(geomean(allScores)), "\n");
+            }
+
+            this.reportScoreToRunBenchmarkRunner();
+            this.dumpJSONResultsIfNeeded();
+            this.isDone = true;
+
+            if (isInBrowser) {
+                globalThis.dispatchEvent(new CustomEvent("JetStreamDone", {
+                    detail: this.resultsObject()
+                }));
+            }
+        } catch (e) {
+            log("Error in benchmark loop: " + e.message);
+            throw e;
         }
     }
 
@@ -1043,7 +1048,7 @@ class Benchmark {
         const containerUI = document.getElementById("results");
         log("Got containerUI");
         const resultsBenchmarkUI = document.getElementById(`benchmark-${this.name}`);
-        log("Got resultsBenchmarkUI")
+        log(`Got resultsBenchmarkUI for bechmark-${this.name}: ${resultsBenchmarkUI}`);
         containerUI.insertBefore(resultsBenchmarkUI, containerUI.firstChild);
         log("Inserted resultsBenchmarkUI into containerUI");
         resultsBenchmarkUI.classList.add("benchmark-running");
